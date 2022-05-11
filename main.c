@@ -1,13 +1,13 @@
 /******************************************************************************
 * File Name:   main.c
 *
-* Description: This is the source code for the PSoC 4 CANFD example
+* Description: This is the source code for the CANFD example
 *
 * Related Document: See README.md
 *
 *
 *******************************************************************************
-* Copyright 2021, Cypress Semiconductor Corporation (an Infineon company) or
+* Copyright 2021-2022, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
 *
 * This software, including source code, documentation and related
@@ -56,33 +56,35 @@
 #define CANFD_BUFFER_INDEX      0
 
 #define CANFD_DLC               8
+
+#ifdef PSOC_6
+#define CANFD_INTERRUPT         canfd_0_interrupts0_0_IRQn
+#else
+#define CANFD_INTERRUPT         canfd_interrupts0_0_IRQn
+#endif
+    
 /*******************************************************************************
 * Function Prototypes
 *******************************************************************************/
 
 /* canfd interrupt handler */
-void isr_canfd (void);
-
-/* canfd frame receive callback */
-void canfd_rx_callback (bool                        msg_valid, 
-                        uint8_t                     msg_buf_fifo_num,
-                        cy_stc_canfd_rx_buffer_t*   canfd_rx_buf);
+static void isr_canfd (void);
 
 /* button press interrupt handler */
-void isr_button (void);
+static void isr_button (void);
 
 /*******************************************************************************
 * Global Variables
 *******************************************************************************/
 
 /* This is a shared context structure, unique for each canfd channel */
-cy_stc_canfd_context_t canfd_context; 
+static cy_stc_canfd_context_t canfd_context;
 
 /* Variable which holds the button pressed status */
-bool    ButtonIntrFlag = false;
+static volatile bool ButtonIntrFlag = false;
 
 /* Array to store the data bytes of the CANFD frame */
-uint32_t canfd_dataBuffer[] = 
+static uint32_t canfd_dataBuffer[] =
 {
     [CANFD_DATA_0] = 0x04030201U,
     [CANFD_DATA_1] = 0x08070605U,
@@ -129,7 +131,7 @@ int main(void)
     }
 
     printf("===============================================================\r\n");
-    printf("PSoC 4 MCU: CANFD example\r\n");
+    printf("Welcome to CANFD example\r\n");
     printf("===============================================================\r\n\n");
 
     printf("===============================================================\r\n");
@@ -140,7 +142,7 @@ int main(void)
     cy_stc_sysint_t canfd_irq_cfg =
     {   
         /* Source of interrupt signal */
-        .intrSrc      = canfd_interrupts0_0_IRQn,
+        .intrSrc      = CANFD_INTERRUPT,
         /* Interrupt priority */
         .intrPriority = 1U,                      
     };
@@ -148,7 +150,7 @@ int main(void)
     /* Hook the interrupt service routine and enable the interrupt */
     (void) Cy_SysInt_Init(&canfd_irq_cfg, &isr_canfd);
 
-    NVIC_EnableIRQ(canfd_interrupts0_0_IRQn);
+    NVIC_EnableIRQ(CANFD_INTERRUPT);
 
     cy_stc_sysint_t switch_intr_config = 
     {
@@ -192,7 +194,7 @@ int main(void)
     for(;;)
     {
         
-        if (ButtonIntrFlag == true)
+        if (true == ButtonIntrFlag)
         {
             /* Sending CANFD frame to other node */
             status = Cy_CANFD_UpdateAndTransmitMsgBuffer(CANFD_HW, 
@@ -218,7 +220,7 @@ int main(void)
 *    None
 *    
 *******************************************************************************/
-void isr_button (void)
+static void isr_button (void)
 {
     /* Clears the triggered pin interrupt */
     Cy_GPIO_ClearInterrupt(CYBSP_USER_BTN_PORT, CYBSP_USER_BTN_PIN);
@@ -240,7 +242,7 @@ void isr_button (void)
 *    
 *
 *******************************************************************************/
-void isr_canfd(void)
+static void isr_canfd(void)
 {
 
     /* Just call the IRQ handler with the current channel number and context */
@@ -267,11 +269,11 @@ void canfd_rx_callback (bool                        msg_valid,
     /* Array to hold the data bytes of the CANFD frame */
     uint8_t canfd_data_buffer[CANFD_DLC];
     /* Variable to hold the data length code of the CANFD frame */
-    int canfd_dlc;
+    uint32_t canfd_dlc;
     /* Variable to hold the Identifier of the CANFD frame */
-    int canfd_id;
+    uint32_t canfd_id;
 
-    if (msg_valid == true)
+    if (true == msg_valid)
     {
         /* Checking whether the frame received is a data frame */
         if(CY_CANFD_RTR_DATA_FRAME == canfd_rx_buf->r0_f->rtr) 
@@ -283,15 +285,15 @@ void canfd_rx_callback (bool                        msg_valid,
             canfd_id  = canfd_rx_buf->r0_f->id;
 
             printf("%d bytes received from Node-%d with identifier %d\r\n\r\n", 
-                                                        canfd_dlc,
-                                                        canfd_id,
-                                                        canfd_id);
+                                                        (int)canfd_dlc,
+                                                        (int)canfd_id,
+                                                        (int)canfd_id);
 
             memcpy(canfd_data_buffer,canfd_rx_buf->data_area_f,canfd_dlc);
 
             printf("Rx Data : ");
 
-            for (uint8_t msg_idx = 0; msg_idx < canfd_dlc ; msg_idx++)
+            for (uint8_t msg_idx = 0U; msg_idx < canfd_dlc ; msg_idx++)
             {
                 printf(" %d ", canfd_data_buffer[msg_idx]);
             }
