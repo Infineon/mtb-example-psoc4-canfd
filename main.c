@@ -7,7 +7,7 @@
 *
 *
 *******************************************************************************
-* Copyright 2021-2022, Cypress Semiconductor Corporation (an Infineon company) or
+* Copyright 2021-2023, Cypress Semiconductor Corporation (an Infineon company) or
 * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
 *
 * This software, including source code, documentation and related
@@ -57,7 +57,7 @@
 
 #define CANFD_DLC               8
 
-#ifdef PSOC_6
+#ifdef COMPONENT_CAT1
 #define CANFD_INTERRUPT         canfd_0_interrupts0_0_IRQn
 #else
 #define CANFD_INTERRUPT         canfd_interrupts0_0_IRQn
@@ -94,9 +94,9 @@ static uint32_t canfd_dataBuffer[] =
 * Function Name: main
 ********************************************************************************
 * Summary:
-* This is the main function for CM0 CPU. It initializes the CANFD channel 
-* and interrupt. User button and User LED are also initilalized. The main loop
-* checks for the button pressed interrupt flag and when it is set, a CANFD frame
+* This is the main function. It initializes the CANFD channel and interrupt.
+* User button and User LED are also initilalized. The main loop checks
+# for the button pressed interrupt flag and when it is set, a CANFD frame
 * is sent. Whenever a CANFD frame is received from other nodes, the user LED 
 * toggles and the received data is logged over serial terminal.
 *
@@ -109,7 +109,6 @@ static uint32_t canfd_dataBuffer[] =
 *******************************************************************************/
 int main(void)
 {
-
     cy_rslt_t result;
 
     cy_en_canfd_status_t status;
